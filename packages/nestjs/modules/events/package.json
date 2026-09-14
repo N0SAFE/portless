@@ -32,7 +32,7 @@
     "@repo/config-prettier": "*",
     "@repo/config-typescript": "*",
     "@repo/config-vitest": "*",
-    "@types/node": "^25.9.1",
+    "@types/node": "^26.5.1",
     "@vitest/coverage-v8": "catalog:testing",
     "eslint": "catalog:linting",
     "prettier": "catalog:linting",
