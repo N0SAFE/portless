@@ -1,0 +1,39 @@
+{
+  "name": "@portless/daemon",
+  "version": "0.1.0",
+  "description": "Portless daemon: control-plane API + reverse proxy + plugin runtime",
+  "private": true,
+  "type": "module",
+  "main": "./src/main.ts",
+  "scripts": {
+    "dev": "bun --watch src/main.ts",
+    "start": "bun run src/main.ts",
+    "build": "bun build ./src/main.ts --target=bun --outfile dist/portless-daemon.js",
+    "lint": "eslint \"src/**/*.ts\"",
+    "type-check": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@nestjs/common": "catalog:api:nest",
+    "@nestjs/core": "catalog:api:nest",
+    "@nestjs/platform-express": "catalog:api:nest",
+    "@portless/core": "*",
+    "@portless/config": "*",
+    "@portless/contracts": "*",
+    "@portless/providers": "*",
+    "reflect-metadata": "catalog:api:nest",
+    "rxjs": "catalog:api:nest"
+  },
+  "devDependencies": {
+    "@nestjs/testing": "catalog:api:nest",
+    "@repo/config-eslint": "*",
+    "@repo/config-prettier": "*",
+    "@repo/config-typescript": "*",
+    "@repo/config-vitest": "*",
+    "@types/express": "^5.0.0",
+    "@types/node": "catalog:build",
+    "typescript": "catalog:build",
+    "vitest": "catalog:testing"
+  }
+}

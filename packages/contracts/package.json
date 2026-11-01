@@ -1,0 +1,34 @@
+{
+  "name": "@portless/contracts",
+  "version": "0.1.0",
+  "description": "Portless control-plane API contracts (routes, apps, projects, hosts, config, plugins, certs, events)",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./src/index.ts",
+        "default": "./src/index.ts"
+      }
+    }
+  },
+  "scripts": {
+    "lint": "eslint \"src/**/*.ts\"",
+    "type-check": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@portless/core": "*"
+  },
+  "devDependencies": {
+    "@repo/config-eslint": "*",
+    "@repo/config-prettier": "*",
+    "@repo/config-typescript": "*",
+    "@repo/config-vitest": "*",
+    "typescript": "catalog:build",
+    "vitest": "catalog:testing"
+  }
+}

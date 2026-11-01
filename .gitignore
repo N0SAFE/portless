@@ -47,3 +47,8 @@ _experiment
 !/.env.template
 !/.env.example
 .env
+
+# portless
+~/.portless
+.portless
+*.portless-ca*

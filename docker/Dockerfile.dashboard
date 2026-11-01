@@ -1,0 +1,25 @@
+# Portless dashboard container image (Next.js standalone build).
+FROM oven/bun:1.3 AS deps
+WORKDIR /app
+COPY . .
+RUN bun install --frozen-lockfile
+
+FROM node:20-alpine AS build
+WORKDIR /app
+COPY --from=deps /app ./
+
+# Build the dashboard with Next standalone output (copied app + deps).
+RUN cd apps/dashboard && bunx next build
+
+FROM node:20-alpine AS runtime
+WORKDIR /app
+ENV NODE_ENV=production
+# Next standalone output places the server under apps/dashboard/.next/standalone.
+COPY --from=build /app/apps/dashboard/.next/standalone ./
+COPY --from=build /app/apps/dashboard/.next/static ./app/dashboard/.next/static
+COPY --from=build /app/apps/dashboard/public ./app/dashboard/public
+
+EXPOSE 3000
+ENV PORT=3000
+ENV HOSTNAME=0.0.0.0
+CMD ["node", "app/dashboard/server.js"]

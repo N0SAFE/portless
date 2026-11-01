@@ -1,0 +1,43 @@
+{
+  "name": "@portless/cli",
+  "version": "0.1.0",
+  "description": "The `portless` CLI — NestJS + nest-commander (mirrors vercel-labs/portless command surface)",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "portless": "./dist/portless"
+  },
+  "scripts": {
+    "dev": "bun --watch src/main.ts",
+    "start": "bun run src/main.ts",
+    "build": "bun run scripts/build.ts",
+    "lint": "eslint \"src/**/*.ts\"",
+    "type-check": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@nestjs/common": "catalog:api:nest",
+    "@nestjs/core": "catalog:api:nest",
+    "@portless/core": "*",
+    "@portless/config": "*",
+    "@portless/contracts": "*",
+    "commander": "catalog:utils",
+    "nest-commander": "catalog:api:nest",
+    "picocolors": "catalog:utils",
+    "prompts": "catalog:utils",
+    "reflect-metadata": "catalog:api:nest",
+    "rxjs": "catalog:api:nest"
+  },
+  "devDependencies": {
+    "@nestjs/testing": "catalog:api:nest",
+    "@repo/config-eslint": "*",
+    "@repo/config-prettier": "*",
+    "@repo/config-typescript": "*",
+    "@repo/config-vitest": "*",
+    "@types/node": "catalog:build",
+    "@types/prompts": "catalog:utils",
+    "typescript": "catalog:build",
+    "vitest": "catalog:testing"
+  }
+}

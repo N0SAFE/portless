@@ -1,0 +1,30 @@
+{
+  "name": "@portless/dashboard",
+  "version": "0.1.0",
+  "description": "Portless dashboard — live view of daemon routes, apps, and providers",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint \"src/**/*.{ts,tsx}\"",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@portless/contracts": "*",
+    "@portless/core": "*",
+    "next": "catalog:next",
+    "react": "catalog:react",
+    "react-dom": "catalog:react"
+  },
+  "devDependencies": {
+    "@repo/config-eslint": "*",
+    "@repo/config-prettier": "*",
+    "@repo/config-typescript": "*",
+    "@types/node": "catalog:build",
+    "@types/react": "catalog:react",
+    "@types/react-dom": "catalog:react",
+    "typescript": "catalog:build"
+  }
+}

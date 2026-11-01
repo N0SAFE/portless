@@ -1,2 +1,45 @@
-include:
-  - docker/compose/docker-compose.dev.yml
+# Portless stack — runs the daemon (control plane + proxy engine) and the
+# dashboard in Docker. This is the "docker-managed" deployment the project
+# supports; on a bare machine you can instead run `portless daemon start`.
+#
+#   docker compose up --build -d
+#   -> daemon control plane on 127.0.0.1:4711
+#   -> dashboard on http://localhost:3000
+services:
+  daemon:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.daemon
+    container_name: portless-daemon
+    environment:
+      PORTLESS_STATE_DIR: /root/.portless
+      PORTLESS_DAEMON_PORT: "4711"
+      PORTLESS_DAEMON_LOG: debug
+    volumes:
+      - portless-state:/root/.portless
+      # Optional: let the container write /etc/hosts for named-URL resolution.
+      # - /etc/hosts:/etc/hosts
+    ports:
+      - "4711:4711"
+      # Proxy (TLS on 443 or plain on 80). On Linux, binding <1024 in a
+      # container is allowed as root; use 80 if you start with --no-tls.
+      - "443:443"
+    restart: unless-stopped
+
+  dashboard:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.dashboard
+    container_name: portless-dashboard
+    environment:
+      PORTLESS_DAEMON_URL: http://daemon:4711
+      NEXT_PUBLIC_PORTLESS_DAEMON_URL: http://127.0.0.1:4711
+      NEXT_PUBLIC_PORTLESS_DAEMON_PORT: "4711"
+    depends_on:
+      - daemon
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+
+volumes:
+  portless-state:

@@ -1,0 +1,23 @@
+# Portless daemon container image.
+# Builds the monorepo (bun workspace) and runs the daemon binary/image.
+FROM oven/bun:1.3 AS base
+WORKDIR /app
+
+# Full monorepo context is required because @portless/* packages are
+# source-linked workspace members.
+COPY . .
+
+# Install workspace deps (bun workspaces).
+RUN bun install --frozen-lockfile
+
+# Type-check and build the CLI + daemon.
+RUN bun --cwd ./packages/core run type-check \
+ && bun --cwd ./packages/config run type-check \
+ && bun --cwd ./packages/contracts run type-check \
+ && bun --cwd ./packages/providers run type-check \
+ && bun --cwd ./apps/daemon run type-check
+
+# Run the daemon (entrypoint).
+EXPOSE 4711 443 80
+ENV PORTLESS_DAEMON_PORT=4711
+CMD ["bun", "run", "./apps/daemon/src/main.ts"]

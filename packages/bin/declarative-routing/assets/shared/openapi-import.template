@@ -1,1 +1,0 @@
-import * as {{{importKey}}} from "{{{pathPrefix}}}/{{{srcDir}}}{{{import}}}";

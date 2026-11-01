@@ -1,0 +1,35 @@
+{
+  "name": "@portless/config",
+  "version": "0.1.0",
+  "description": "Portless configuration: global + per-project schema, discovery, env-per-project",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./src/index.ts",
+        "default": "./src/index.ts"
+      }
+    }
+  },
+  "scripts": {
+    "lint": "eslint \"src/**/*.ts\"",
+    "type-check": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@portless/core": "*",
+    "zod": "catalog:utils"
+  },
+  "devDependencies": {
+    "@repo/config-eslint": "*",
+    "@repo/config-prettier": "*",
+    "@repo/config-typescript": "*",
+    "@repo/config-vitest": "*",
+    "typescript": "catalog:build",
+    "vitest": "catalog:testing"
+  }
+}

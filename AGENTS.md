@@ -1,154 +1,102 @@
-# AGENTS.md — Repository Operating Guide for AI Agents
+# AGENTS.md — Portless
 
-This file defines how AI coding agents must operate in this repository. It exists alongside per-app and per-package AGENTS.md files that add local rules. Always read the root AGENTS.md first, then the closest AGENTS.md to where you will work.
+Guidance for coding agents working in this repo.
 
-## Golden Rules (Must Follow)
+## What this is
 
-1) Always load repo context via MCP first
-- Use the MCP server in `packages/mcp-repo-manager` as your primary interface.
-- Before changing anything, call these resources in order:
-  - `repo://summary` (overview)
-  - `repo://apps` and `repo://packages`
-  - `repo://agents` (index of all AGENTS.md files)
-- Use resource templates to inspect targets:
-  - `repo://app/{name}/package.json` and `repo://package/{name}/package.json`
-  - `repo://app/{name}/dependencies` and `repo://package/{name}/dependencies`
-  - `repo://graph/uses/{name}` and `repo://graph/used-by/{name}`
+A local development runtime + reverse proxy that maps stable named `.localhost`
+URLs to dev servers/containers. **Daemon-first**: a long-running daemon owns
+routes, apps, certs, and config; the CLI, dashboard, and agents talk to it over a
+local HTTP API. It mirrors the command surface of `vercel-labs/portless` and
+supports `mazrean/dockportless` integration, Docker Compose, per-project/global
+config, and a pluggable provider model.
 
-2) Read the nearest AGENTS.md
-- For any change inside `apps/<name>/` or `packages/<name>/`, read that folder’s `AGENTS.md`.
-- If conflicts exist, local AGENTS.md overrides root only for that scope.
+## Monorepo layout & dependency rules
 
-3) Prefer MCP tools over ad-hoc edits
-- Use MCP tools to list/create/update targets and dependencies:
-  - Tools: `list-apps`, `list-packages`, `show-*-dependencies`, `add-dependency`, `remove-dependency`, `add-script`, `bump-version`, `run-script`, `delete-target` (danger), `list-internal-dependencies`.
-- When creating apps/packages, use the provided tools: `create-app`, `create-package`.
+```
+apps/
+  cli/          NestJS + nest-commander CLI (the `portless` binary)
+  daemon/       NestJS control-plane API + reverse proxy engine
+  dashboard/    Next.js dashboard over the control plane
+packages/
+  config/       config schema/discovery/precedence + per-project env
+  contracts/    shared control-plane API types
+  core/         protocol types, daemon client, proxy engine, CA, store
+  providers/    pluggable providers: process, docker, dockportless
+  configs/      shared eslint / prettier / ts / vitest configs
+```
 
-4) Validate changes
-- Run type-checks and tests before concluding work on a change.
-- For graph-impacting changes (dependencies, versions), also check reverse dependents via `repo://graph/used-by/{name}`.
+Dependency direction (do not violate):
 
-5) Documentation is mandatory
-- If you add new concepts, patterns, or workflows, update documentation per `.github/copilot-instructions.md` “New Concept Documentation Protocol”.
+```
+config -> core
+contracts -> core
+core -> (nothing app-specific)
+providers -> core, config
+daemon -> core, contracts, providers
+cli -> core, contracts, config
+dashboard -> contracts, core
+```
 
-6) Immediate error recovery for MCP actions
-- When using the MCP Repo Manager tools/resources and an error occurs, you must immediately attempt to fix it and retry.
-- Apply the smallest corrective action first (e.g., adjust parameters, create a missing script via `add-script`, add a missing dependency with `add-dependency`, run `docker-up` if a service is required) and retry up to 2 times.
-- Use `repo://changes` and `repo://diff-summary/{path}` to understand pending changes; use `repo://commit/plan` and the `commit-plan` prompt to validate before committing.
+`core` must stay dependency-free of apps. `providers` depends only on `core` and
+`config`. Composition lives in the apps.
 
-## Development Workflows
+## Package naming & wiring
 
-- Default dev:
-  - `bun run dev` (docker-orchestrated full stack) or local equivalents as documented
-  - For scripts within a target, prefer `run-script` MCP tool to execute `package.json` scripts.
-- Build & test:
-  - `bun run build`
-  - `bun run test` or `bun run test:coverage`
+- Packages are `@portless/*` (new) or `@repo/config-*` (kept shared configs).
+- Workspace packages are linked via bun workspaces (`apps/**`, `packages/**`).
+- **Add catalogs in the root `package.json`** (`workspaces.catalogs`) — packages
+  refer to shared deps with `catalog:<key>` (e.g. NestJS = `catalog:api:nest`,
+  commander/picocolors/prompts/zod = `catalog:utils`). Do not pin versions in leaf
+  packages when a catalog exists.
+- Leaf `package.json` files export `.ts` source directly (bun runs TS natively).
 
-## Commit Policy
+## Command surface (keep compatible)
 
-- Use conventional commit style with scopes that reflect the feature area, for example:
-  - `feat(mcpRepoManager): Add list-agents tool`
-  - `fix(webRouting): Resolve route gen race`
-- Keep commits focused and logically grouped.
+The CLI must stay a superset of `vercel-labs/portless`:
 
-## Safety and Boundaries
+`run`, `portless <name> <cmd>`, `alias`, `list`/`ls`, `doctor`, `trust`, `clean`,
+`prune`, `hosts sync|clean`, `proxy start|stop`, `service install|status|uninstall`.
+Our additions: `daemon start|stop|status`, `dev`, `config get|set|init`,
+`plugins`, `init`.
 
-- Do not remove or rename workspace packages without an explicit instruction and confirmation flag when using tools like `delete-target`.
-- Avoid direct edits to generated files—use the documented generators.
-- Treat environment and deployment configs with extra caution; update docs when changing them.
+Reserved words (cannot be bare app names): `run`, `get`, `alias`, `hosts`, `list`,
+`ls`, `doctor`, `trust`, `clean`, `prune`, `proxy`, `service`, `config`, `login`,
+`logout`, `dev`, `up`, `down`, `plugins`, `init`.
 
-## Quickstart Checklists
+Children get injected: `PORT`, `HOST`, `PORTLESS_URL`, `PORTLESS_PROJECT`.
 
-Context bootstrap (always):
-- [ ] Fetch `repo://summary`
-- [ ] Fetch `repo://apps` and `repo://packages`
-- [ ] Fetch `repo://agents` and open relevant AGENTS.md files
+## Conventions
 
-Change planning:
-- [ ] Inspect target `package.json`
-- [ ] Inspect deps via resource templates
-- [ ] Check graph uses/used-by
+- **TypeScript strict**, `tsc --noEmit` (`bun run type-check`) must pass for every
+  package and app. The `turbo` aggregate is `turbo type-check`.
+- **Do not use `baseUrl`** in tsconfig (removed in TS 5.9). Use relative `./`
+  `paths` entries.
+- **zod v4**: `z.record` requires `(keySchema, valueSchema)`; `z.record(x)` is invalid.
+- **NestJS**: decorate services with `@Injectable()`; the root CLI `@Command` requires
+  `name` (use `name: "portless"` with `arguments: "[args...]"`).
+- Use `node:fs/promises` for async file I/O; `node:fs` readFile is callback-based.
+- Keep `core` and `contracts` free of framework imports (NestJS/Next).
+- stdout = machine-readable data, stderr = human UI/logging.
 
-Execution:
-- [ ] Apply changes via MCP tools
-- [ ] Type-check and test
-- [ ] Update documentation as needed
+## Common tasks
 
-This repository expects disciplined, tool-driven changes to maintain consistency and reliability.
+```bash
+bun install                  # install workspace deps (frozen: --frozen-lockfile)
+bun run dev:daemon           # run the daemon (control plane + proxy)
+bun run dev:cli              # run the CLI
+bun run dev:dashboard        # run the dashboard
+bun run type-check           # tsc across all 11 packages/apps
+bun run test                 # vitest across the repo
+bun run lint                 # eslint
+bun run format               # prettier
+```
 
-## Mandatory MCP Tools by Area
+## When adding a feature
 
-Repo-wide (always):
-- Resources: `repo://summary`, `repo://apps`, `repo://packages`, `repo://agents`
-- Readiness: `repo://commit/plan` or `commit-plan` prompt (lint → type-check → build)
-- Docker orchestration: `docker-up { mode: dev|prod, target: api|web|all }` (do not use `docker compose down`)
-- Utilities: `list-agents`, `list-internal-dependencies`, `run-script`, `add-script`, `add-dependency`, `remove-dependency`, `bump-version`
-
-API (apps/api):
-- `auth-generate` — regenerate auth schema/types after any auth configuration changes
-- `api-db { action: generate|push|migrate|seed|reset|studio }` — database lifecycle
-
-Web (apps/web):
-- Use `run-script` to execute `dr:build` (and `dr:build:watch`) after route changes
-- Start stack via `docker-up { target: web }` as needed
-
-UI (packages/ui):
-- `ui-add { components: [...] }` — add Shadcn components to the shared UI library
-
-General packages:
-- Prefer `run-script` for local scripts, `bump-version` for versioning, and `list-internal-dependencies` to assess impact before changes.
-
-## Enhanced MCP Tools for LLM Access
-
-### Database Access
-- Tool: `db-execute-query` - Run SELECT queries on dev DB via Drizzle, return rows.
-- Resource: `repo://db/schema` - List tables/columns from schema.
-
-### Testing
-- Tool: `run-tests` - Execute Vitest on targets with coverage.
-- Resource: `repo://tests/results/latest` - Last test summary.
-
-### Git & History
-- Tool: `git-history` - Commit history for paths.
-- Resource: `repo://git/blame/{file}:{line}` - Blame info.
-
-### Docker & Runtime
-- Tool: `docker-logs-tail` - Tail service logs.
-- Tool: `docker-health-check` - Ping /health on services.
-
-### Security & Analysis
-- Tool: `scan-vulns` - Bun audit for deps.
-- Resource: `repo://code/metrics` - LOC/files metrics.
-
-### Previous Enhancements (API/ORPC/TanStack)
-- `api-call-as-role`, `repo://api/keys`
-- `repo://api/schema/*`, `api-schema-query`
-- `repo://orpc/contracts/*`, `orpc-schema-get`
-- `web-tanstack-state`, `repo://web/routes`, `repo://web/tanstack/queries`
-
-Start dev stack with `docker-up { mode: 'dev' }` for runtime tools. See docs/MCP-ENHANCEMENTS-IDEA.md for details.
-
-## Execution Context: Local vs Docker (Dev)
-
-Some tools/scripts are designed to run locally, while others must run inside the development containers.
-
-- Local (host machine):
-  - `auth-generate` (apps/api) — generates files from `src/auth.ts`
-  - `api-db { action: "generate" | "push" | "migrate" }` (apps/api) — uses local Drizzle CLI and project files
-  - `ui-add` (packages/ui) — installs UI components and updates files
-  - `run-script` for `type-check`, `lint`, and build commands that do not require running services
-
-- Inside Docker (dev containers):
-  - `api-db { action: "seed" }` — seeds the database; should run against the dev database container
-  - Any command that relies on container networking (e.g., services on `api:3001`)
-
-How to run inside Docker:
-- Prefer starting the stack with `docker-up { mode: "dev", target: "api" }` and then interact via service scripts.
-- For interactive commands, use the provided root scripts, e.g.:
-  - `bun run dev:api:run` — starts a shell inside the API dev container
-  - Once inside, run `bun --bun run db:seed` or the equivalent script
-
-Rule of thumb:
-- If a command writes to the workspace (generates code/config), run it locally unless it needs container services.
-- If a command depends on database/service availability (like seeding), run it inside the dev containers.
+1. If it crosses packages, update `ARCHITECTURE.md` and the relevant package README.
+2. Keep the command surface compatible with `vercel-labs/portless`.
+3. Add catalog entries to the root `package.json`, not hard versions in leaves.
+4. Wire realtime updates through the daemon's `EventsService` (SSE) so the dashboard
+   and `portless dev` reflect changes.
+5. Ensure `bun run type-check` passes before finishing.
