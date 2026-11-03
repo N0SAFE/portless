@@ -4,14 +4,14 @@ WORKDIR /app
 COPY . .
 RUN bun install --frozen-lockfile
 
-FROM node:20-alpine AS build
+FROM node:26-alpine AS build
 WORKDIR /app
 COPY --from=deps /app ./
 
 # Build the dashboard with Next standalone output (copied app + deps).
 RUN cd apps/dashboard && bunx next build
 
-FROM node:20-alpine AS runtime
+FROM node:26-alpine AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 # Next standalone output places the server under apps/dashboard/.next/standalone.
